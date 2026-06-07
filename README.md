@@ -1,36 +1,107 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Raiment — Elevated Fashion E-Commerce
+
+A production-ready, visually premium e-commerce storefront for the Raiment fashion brand.
+
+## Stack
+
+- **Next.js 16** (App Router, TypeScript)
+- **Tailwind CSS v4**
+- **Framer Motion** — page transitions, scroll animations, card effects
+- **GSAP + ScrollTrigger** — intro loader, split text, parallax
+- **Three.js** — 3D hero canvas
+- **Zustand** — persistent cart state
+- **Firebase Firestore** — product data (client-side, read-only)
+
+---
 
 ## Getting Started
 
-First, run the development server:
+### 1. Install dependencies
+
+```bash
+npm install
+```
+
+### 2. Configure Firebase
+
+Your credentials are already in `.env.local`. To change them, edit that file:
+
+```env
+NEXT_PUBLIC_FIREBASE_API_KEY=...
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=...
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=...
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=...
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=...
+NEXT_PUBLIC_FIREBASE_APP_ID=...
+```
+
+### 3. Firestore collection
+
+Products collection must be named `products`. Each document:
+
+```json
+{
+  "name": "string",
+  "price": 120.00,
+  "description": "string",
+  "images": ["https://..."],
+  "category": "string",
+  "inStock": true,
+  "tags": ["tag1", "tag2"]
+}
+```
+
+### 4. Firebase Security Rules
+
+Allow public reads on the products collection:
+
+```
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /products/{doc} {
+      allow read: if true;
+    }
+  }
+}
+```
+
+### 5. Run locally
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3000
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Pages
 
-## Learn More
+| Route | Description |
+|---|---|
+| `/` | Home: loader → hero → featured products → brand story → newsletter |
+| `/products` | Full catalogue with category filters and sort |
+| `/products/[id]` | Product detail with image gallery and related items |
+| `/cart` | Cart with quantity controls and order summary |
 
-To learn more about Next.js, take a look at the following resources:
+## Key Files
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| File | Purpose |
+|---|---|
+| `lib/firebase.ts` | Firebase app init |
+| `lib/firestore.ts` | Product fetch utilities |
+| `store/cartStore.ts` | Zustand cart (persisted to localStorage) |
+| `components/Cursor.tsx` | Custom cursor with lerp damping |
+| `components/Loader.tsx` | GSAP intro loader (once per session) |
+| `components/HeroScene.tsx` | Three.js 3D canvas |
+| `components/ProductCard.tsx` | CSS 3D tilt card with gloss layer |
+| `components/MagneticButton.tsx` | Magnetic hover CTA |
+| `components/SplitText.tsx` | GSAP character scroll reveal |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Deployment (Vercel)
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. Push to GitHub
+2. Import in Vercel
+3. Add all `NEXT_PUBLIC_FIREBASE_*` environment variables in project settings
+4. Deploy
