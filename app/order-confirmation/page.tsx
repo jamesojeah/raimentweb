@@ -110,11 +110,19 @@ export default function OrderConfirmationPage() {
               </div>
             ))}
           </div>
-          <div className="border-t border-gray-100 mt-3 pt-3 flex justify-between items-center">
-            <span className="font-bold text-gray-800">Total Paid</span>
-            <span className="text-lg font-bold text-[#7C3AED]">
-              ₦{lastOrder.total.toLocaleString()}
-            </span>
+          <div className="border-t border-gray-100 mt-3 pt-3 space-y-1.5">
+            <div className="flex justify-between items-center text-sm">
+              <span className="text-gray-400">Delivery Fee</span>
+              <span className="text-gray-700 font-medium">
+                ₦{lastOrder.shippingFee.toLocaleString()}
+              </span>
+            </div>
+            <div className="flex justify-between items-center pt-1">
+              <span className="font-bold text-gray-800">Total Paid</span>
+              <span className="text-lg font-bold text-[#7C3AED]">
+                ₦{lastOrder.total.toLocaleString()}
+              </span>
+            </div>
           </div>
         </motion.div>
 
@@ -131,6 +139,12 @@ export default function OrderConfirmationPage() {
               <span className="text-gray-400 flex-shrink-0">Email</span>
               <span className="text-gray-700 font-medium text-right truncate">
                 {lastOrder.customerEmail}
+              </span>
+            </div>
+            <div className="flex justify-between gap-4">
+              <span className="text-gray-400 flex-shrink-0">Delivery State</span>
+              <span className="text-gray-700 font-medium text-right">
+                {lastOrder.deliveryState}
               </span>
             </div>
             <div className="flex justify-between gap-4">

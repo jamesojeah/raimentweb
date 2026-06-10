@@ -7,8 +7,6 @@ import { useCart } from "@/hooks/useCart";
 export default function CartPage() {
   const { items, removeItem, updateQuantity, total, clearCart } = useCart();
   const cartTotal = total();
-  const shipping = 10;
-  const orderTotal = cartTotal + shipping;
   const itemCount = items.reduce((s, i) => s + i.quantity, 0);
 
   return (
@@ -156,15 +154,15 @@ export default function CartPage() {
                   <span className="text-gray-500">Subtotal</span>
                   <span className="text-gray-700 font-medium">₦{cartTotal.toLocaleString()}</span>
                 </div>
-                <div className="flex justify-between text-sm">
+                <div className="flex justify-between text-sm items-center">
                   <span className="text-gray-500">Delivery Fee</span>
-                  <span className="text-gray-700 font-medium">₦{shipping.toLocaleString()}</span>
+                  <span className="text-gray-400 text-xs">Calculated at checkout</span>
                 </div>
               </div>
 
               <div className="border-t border-gray-100 pt-3 mb-5 flex justify-between items-center">
-                <span className="text-base font-bold text-gray-800">Total</span>
-                <span className="text-lg font-bold text-[#7C3AED]">₦{orderTotal.toLocaleString()}</span>
+                <span className="text-base font-bold text-gray-800">Subtotal</span>
+                <span className="text-lg font-bold text-[#7C3AED]">₦{cartTotal.toLocaleString()}</span>
               </div>
 
               <Link

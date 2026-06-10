@@ -10,6 +10,7 @@ import FlutterwavePayment, {
 } from "@/components/FlutterwavePayment";
 import { FlutterWaveTypes } from "flutterwave-react-v3";
 import type { PaymentInitiateResponse, PaymentVerifyResponse } from "@/types/payment";
+import { NIGERIAN_STATES, getShippingFee } from "@/lib/shipping";
 
 type FlutterwaveConfig = FlutterWaveTypes.FlutterwaveConfig;
 
@@ -17,9 +18,8 @@ interface CheckoutForm {
   name: string;
   email: string;
   phone: string;
+  state: string;
 }
-
-const SHIPPING = 10;
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -27,7 +27,7 @@ export default function CheckoutPage() {
   const { setLastOrder } = useOrderStore();
 
   const [mounted, setMounted] = useState(false);
-  const [form, setForm] = useState<CheckoutForm>({ name: "", email: "", phone: "" });
+  const [form, setForm] = useState<CheckoutForm>({ name: "", email: "", phone: "", state: "" });
   const [errors, setErrors] = useState<Partial<CheckoutForm>>({});
   const [loading, setLoading] = useState(false);
   const [paymentError, setPaymentError] = useState("");
@@ -37,7 +37,8 @@ export default function CheckoutPage() {
   useEffect(() => { setMounted(true); }, []);
 
   const cartTotal = total();
-  const orderTotal = cartTotal + SHIPPING;
+  const shippingFee = getShippingFee(form.state);
+  const orderTotal = cartTotal + shippingFee;
 
   const validate = (): boolean => {
     const errs: Partial<CheckoutForm> = {};
@@ -46,6 +47,7 @@ export default function CheckoutPage() {
       errs.email = "Valid email address required";
     if (form.phone.replace(/\D/g, "").length < 10)
       errs.phone = "Valid phone number required";
+    if (!form.state) errs.state = "Please select your delivery state";
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -130,6 +132,8 @@ export default function CheckoutPage() {
           total: orderTotal,
           customerName: form.name.trim(),
           customerEmail: form.email.trim(),
+          deliveryState: form.state,
+          shippingFee,
           paidAt: new Date().toISOString(),
         });
         clearCart();
@@ -300,6 +304,43 @@ export default function CheckoutPage() {
                 )}
               </AnimatePresence>
             </div>
+
+            {/* Delivery State */}
+            <div>
+              <label className="block text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-1.5">
+                Delivery State
+              </label>
+              <select
+                value={form.state}
+                onChange={(e) => setForm((f) => ({ ...f, state: e.target.value }))}
+                className={`w-full px-4 py-3 rounded-xl bg-gray-50 border text-sm text-gray-800 outline-none transition-all appearance-none focus:border-[#7C3AED] focus:bg-white focus:ring-2 focus:ring-purple-100 ${
+                  errors.state ? "border-red-400 bg-red-50" : "border-gray-200"
+                }`}
+                style={{
+                  backgroundImage:
+                    "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239CA3AF' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E\")",
+                  backgroundRepeat: "no-repeat",
+                  backgroundPosition: "right 16px center",
+                }}
+              >
+                <option value="">Select state</option>
+                {NIGERIAN_STATES.map((s) => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+              <AnimatePresence>
+                {errors.state && (
+                  <motion.p
+                    initial={{ opacity: 0, y: -4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                    className="text-xs text-red-400 mt-1"
+                  >
+                    {errors.state}
+                  </motion.p>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
         </motion.form>
 
@@ -331,7 +372,7 @@ export default function CheckoutPage() {
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-gray-500">Delivery Fee</span>
-              <span className="font-medium text-gray-700">₦{SHIPPING.toLocaleString()}</span>
+              <span className="font-medium text-gray-700">₦{shippingFee.toLocaleString()}</span>
             </div>
             <div className="flex justify-between items-center pt-1">
               <span className="font-bold text-gray-800">Total</span>

@@ -45,5 +45,7 @@ export interface CompletedOrder {
   total: number;
   customerName: string;
   customerEmail: string;
+  deliveryState: string;
+  shippingFee: number;
   paidAt: string;
 }
