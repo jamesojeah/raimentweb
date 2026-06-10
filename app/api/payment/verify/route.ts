@@ -1,22 +1,13 @@
 import { createHmac, timingSafeEqual } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 
-function getAllowedOrigins(): string[] {
-  return [
-    process.env.NEXT_PUBLIC_SITE_URL,
-    "http://localhost:3000",
-    "http://localhost:3001",
-  ].filter((o): o is string => Boolean(o));
-}
-
-function corsHeaders(origin: string | null): Record<string, string> {
+function corsHeaders(req: NextRequest, origin: string | null): Record<string, string> {
   const headers: Record<string, string> = {
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type",
     Vary: "Origin",
   };
-  const allowed = getAllowedOrigins();
-  if (origin && allowed.includes(origin)) {
+  if (origin === req.nextUrl.origin) {
     headers["Access-Control-Allow-Origin"] = origin;
   }
   return headers;
@@ -32,15 +23,16 @@ function secureCompare(a: string, b: string): boolean {
 export async function OPTIONS(req: NextRequest) {
   return new NextResponse(null, {
     status: 204,
-    headers: corsHeaders(req.headers.get("origin")),
+    headers: corsHeaders(req, req.headers.get("origin")),
   });
 }
 
 export async function POST(req: NextRequest) {
   const origin = req.headers.get("origin");
-  const headers = corsHeaders(origin);
+  const headers = corsHeaders(req, origin);
 
-  if (origin && !getAllowedOrigins().includes(origin)) {
+  // Block cross-origin requests — this endpoint is only called from our own checkout page
+  if (origin && origin !== req.nextUrl.origin) {
     return NextResponse.json({ success: false, message: "Forbidden" }, { status: 403 });
   }
 
