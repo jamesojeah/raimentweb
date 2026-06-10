@@ -6,6 +6,8 @@ import Cursor from "@/components/Cursor";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import VideoBackground from "@/components/VideoBackground";
+import WhatsAppButton from "@/components/WhatsAppButton";
+import SearchOverlay from "@/components/SearchOverlay";
 
 const playfair = Playfair_Display({
   variable: "--font-playfair",
@@ -44,6 +46,8 @@ export default function RootLayout({
           <Navbar />
           <main className="flex-1">{children}</main>
           <Footer />
+          <WhatsAppButton />
+          <SearchOverlay />
         </CursorProvider>
       </body>
     </html>

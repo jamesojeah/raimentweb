@@ -1,19 +1,13 @@
 "use client";
-import { useState, useEffect } from "react";
-import { fetchProducts } from "@/lib/firestore";
-import type { Product } from "@/types/product";
+import { useEffect } from "react";
+import { useProductsStore } from "@/store/productsStore";
 
 export function useProducts() {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { products, loading, error, loadProducts } = useProductsStore();
 
   useEffect(() => {
-    fetchProducts()
-      .then(setProducts)
-      .catch((e) => setError(e.message))
-      .finally(() => setLoading(false));
-  }, []);
+    loadProducts();
+  }, [loadProducts]);
 
   return { products, loading, error };
 }

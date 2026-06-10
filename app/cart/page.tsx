@@ -167,9 +167,12 @@ export default function CartPage() {
                 <span className="text-lg font-bold text-[#7C3AED]">₦{orderTotal.toLocaleString()}</span>
               </div>
 
-              <button className="w-full py-4 bg-[#7C3AED] hover:bg-[#6D28D9] text-white text-sm font-bold tracking-wide rounded-2xl transition-colors cursor-pointer mb-3">
+              <Link
+                href="/checkout"
+                className="block w-full py-4 bg-[#7C3AED] hover:bg-[#6D28D9] text-white text-sm font-bold tracking-wide rounded-2xl transition-colors text-center mb-3"
+              >
                 Proceed to Checkout
-              </button>
+              </Link>
 
               <Link
                 href="/products"

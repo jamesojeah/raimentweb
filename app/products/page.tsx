@@ -1,5 +1,5 @@
 "use client";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { motion } from "framer-motion";
 import ProductCard from "@/components/ProductCard";
 import ProductSkeleton from "@/components/ProductSkeleton";
@@ -18,6 +18,8 @@ export default function ProductsPage() {
   const { products, loading, error } = useProducts();
   const [activeCategory, setActiveCategory] = useState<string>("All");
   const [sort, setSort] = useState<SortValue>("newest");
+  const [search, setSearch] = useState("");
+  const searchRef = useRef<HTMLInputElement>(null);
 
   const categories = useMemo(() => {
     const cats = Array.from(new Set(products.map((p) => p.category)));
@@ -25,14 +27,24 @@ export default function ProductsPage() {
   }, [products]);
 
   const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
     let list = activeCategory === "All" ? products : products.filter((p) => p.category === activeCategory);
+    if (q) {
+      list = list.filter(
+        (p) =>
+          p.name.toLowerCase().includes(q) ||
+          p.category.toLowerCase().includes(q) ||
+          p.description?.toLowerCase().includes(q) ||
+          p.tags?.some((t) => t.toLowerCase().includes(q))
+      );
+    }
     switch (sort) {
       case "price-asc": return [...list].sort((a, b) => a.price - b.price);
       case "price-desc": return [...list].sort((a, b) => b.price - a.price);
       case "name": return [...list].sort((a, b) => a.name.localeCompare(b.name));
       default: return list;
     }
-  }, [products, activeCategory, sort]);
+  }, [products, activeCategory, sort, search]);
 
   return (
     <div className="min-h-screen bg-[#F8F7FF]">
@@ -54,10 +66,49 @@ export default function ProductsPage() {
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, delay: 0.05 }}
-            className="font-serif text-3xl sm:text-4xl text-white font-bold"
+            className="font-serif text-3xl sm:text-4xl text-white font-bold mb-4"
           >
             All Products
           </motion.h1>
+
+          {/* Search bar */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.1 }}
+            className="relative max-w-md"
+          >
+            <svg
+              className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
+              width="15" height="15" viewBox="0 0 24 24" fill="none"
+              stroke="rgba(255,255,255,0.45)" strokeWidth="2"
+            >
+              <circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" />
+            </svg>
+            <input
+              ref={searchRef}
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search products…"
+              className="w-full pl-10 pr-10 py-2.5 rounded-xl text-sm text-white placeholder-white/40 outline-none transition-all"
+              style={{
+                background: "rgba(255,255,255,0.12)",
+                border: "1px solid rgba(255,255,255,0.18)",
+              }}
+            />
+            {search && (
+              <button
+                onClick={() => { setSearch(""); searchRef.current?.focus(); }}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/80 transition-colors cursor-pointer"
+                aria-label="Clear search"
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path d="M18 6L6 18M6 6l12 12" />
+                </svg>
+              </button>
+            )}
+          </motion.div>
         </div>
       </div>
 
@@ -122,7 +173,9 @@ export default function ProductsPage() {
 
         {!loading && filtered.length === 0 && !error && (
           <div className="text-center py-20 text-gray-400 text-sm">
-            No products found in this category.
+            {search.trim()
+              ? `No products found for "${search}"`
+              : "No products found in this category."}
           </div>
         )}
       </div>

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useCursor } from "@/hooks/useCursor";
 import { useCart } from "@/hooks/useCart";
+import { useSearchStore } from "@/store/searchStore";
 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -11,6 +12,7 @@ export default function Navbar() {
   const { onHover, onLeave } = useCursor();
   const { itemCount } = useCart();
   const count = itemCount();
+  const openSearch = useSearchStore((s) => s.open);
 
   useEffect(() => {
     const handler = () => setScrolled(window.scrollY > 20);
@@ -68,8 +70,8 @@ export default function Navbar() {
 
         {/* Actions */}
         <div className="flex items-center gap-2">
-          <Link
-            href="/products"
+          <button
+            onClick={openSearch}
             className="w-9 h-9 flex items-center justify-center rounded-full cursor-pointer transition-all duration-200 hover:scale-105"
             style={{
               background: "rgba(255,255,255,0.06)",
@@ -80,7 +82,7 @@ export default function Navbar() {
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="2">
               <circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" />
             </svg>
-          </Link>
+          </button>
 
           <Link
             href="/cart"
