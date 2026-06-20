@@ -296,8 +296,10 @@ export async function listAllDataPlans(): Promise<DataPlan[]> {
   return snap.docs.map((doc) => docToDataPlan(doc.id, doc.data()));
 }
 
+// Marks the plan as price-overridden so syncPeyflexDataPlans() never
+// clobbers a manually-set price on its next run.
 export async function updateDataPlanSellingPrice(planId: string, sellingPrice: number): Promise<void> {
-  await getAdminDb().collection(DATA_PLANS).doc(planId).update({ sellingPrice });
+  await getAdminDb().collection(DATA_PLANS).doc(planId).update({ sellingPrice, priceOverridden: true });
 }
 
 export async function markReconciliationRecovered(id: string): Promise<void> {

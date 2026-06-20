@@ -50,26 +50,34 @@ export async function syncPeyflexDataPlans(): Promise<SyncPeyflexDataPlansResult
       );
       continue;
     }
+
+    // An admin may have hand-set sellingPrice via /api/admin/pricing — never
+    // clobber that on a re-sync, only refresh cost/catalog fields for it.
+    const existingSnap = await db.collection("dataPlans").where("network", "==", network.identifier).get();
+    const overridden = new Set(
+      existingSnap.docs.filter((doc) => doc.data().priceOverridden === true).map((doc) => doc.id)
+    );
+
     const batch = db.batch();
 
     for (const plan of plans) {
-      batch.set(
-        db.collection("dataPlans").doc(docId(network.identifier, plan.plan_code)),
-        {
-          network: network.identifier,
-          planName: planNameFromLabel(plan.label),
-          dataAmount: dataAmountFromLabel(plan.label),
-          planType: "Peyflex",
-          peyflexPlanId: plan.plan_code,
-          peyflexCost: plan.amount,
-          cheapdatahubPlanId: null,
-          cheapdatahubCost: null,
-          sellingPrice: suggestSellingPrice(plan.amount),
-          isActive: true,
-          updatedAt: Date.now(),
-        },
-        { merge: true }
-      );
+      const id = docId(network.identifier, plan.plan_code);
+      const fields: Record<string, unknown> = {
+        network: network.identifier,
+        planName: planNameFromLabel(plan.label),
+        dataAmount: dataAmountFromLabel(plan.label),
+        planType: "Peyflex",
+        peyflexPlanId: plan.plan_code,
+        peyflexCost: plan.amount,
+        cheapdatahubPlanId: null,
+        cheapdatahubCost: null,
+        isActive: true,
+        updatedAt: Date.now(),
+      };
+      if (!overridden.has(id)) {
+        fields.sellingPrice = suggestSellingPrice(plan.amount);
+      }
+      batch.set(db.collection("dataPlans").doc(id), fields, { merge: true });
       plansWritten++;
     }
 
