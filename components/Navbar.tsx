@@ -1,24 +1,51 @@
 "use client";
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useCursor } from "@/hooks/useCursor";
 import { useCart } from "@/hooks/useCart";
+import { useAuth } from "@/hooks/useAuth";
 import { useSearchStore } from "@/store/searchStore";
 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
   const { onHover, onLeave } = useCursor();
   const { itemCount } = useCart();
   const count = itemCount();
   const openSearch = useSearchStore((s) => s.open);
+  const { user, profile, loading: authLoading, logout } = useAuth();
+  const router = useRouter();
+  const accountRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handler = () => setScrolled(window.scrollY > 20);
     window.addEventListener("scroll", handler, { passive: true });
     return () => window.removeEventListener("scroll", handler);
   }, []);
+
+  useEffect(() => {
+    if (!accountOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (accountRef.current && !accountRef.current.contains(e.target as Node)) {
+        setAccountOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [accountOpen]);
+
+  const handleLogout = async () => {
+    setAccountOpen(false);
+    setMenuOpen(false);
+    await logout();
+    router.push("/");
+  };
+
+  const displayName = profile?.name || user?.displayName || user?.email || "";
+  const initial = displayName.charAt(0).toUpperCase() || "?";
 
   return (
     <motion.header
@@ -55,6 +82,12 @@ export default function Navbar() {
           {[
             { label: "Shop", href: "/products" },
             { label: "About", href: "/#story" },
+            ...(!authLoading && !user
+              ? [
+                  { label: "Login", href: "/auth/login" },
+                  { label: "Sign Up", href: "/auth/register" },
+                ]
+              : []),
           ].map(({ label, href }) => (
             <Link
               key={label}
@@ -83,6 +116,78 @@ export default function Navbar() {
               <circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" />
             </svg>
           </button>
+
+          {/* Account (logged in) */}
+          {!authLoading && user && (
+            <div className="hidden md:flex items-center gap-2 relative" ref={accountRef}>
+              <Link
+                href="/dashboard"
+                className="flex items-center gap-1.5 px-3 h-9 rounded-full cursor-pointer transition-all duration-200 hover:scale-105"
+                style={{
+                  background: "rgba(124, 58, 237, 0.22)",
+                  border: "1px solid rgba(124, 58, 237, 0.4)",
+                }}
+                onMouseEnter={onHover("WALLET")}
+                onMouseLeave={onLeave}
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.9)" strokeWidth="2">
+                  <rect x="2" y="6" width="20" height="14" rx="2" />
+                  <path d="M2 10h20" />
+                  <circle cx="17" cy="15" r="1" fill="rgba(255,255,255,0.9)" />
+                </svg>
+                <span className="text-xs font-semibold text-white">
+                  ₦{(profile?.walletBalance ?? 0).toLocaleString()}
+                </span>
+              </Link>
+
+              <button
+                onClick={() => setAccountOpen((o) => !o)}
+                className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-white cursor-pointer transition-all duration-200 hover:scale-105"
+                style={{ background: "#7C3AED" }}
+                aria-label="Account menu"
+              >
+                {initial}
+              </button>
+
+              <AnimatePresence>
+                {accountOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -8, scale: 0.97 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -8, scale: 0.97 }}
+                    transition={{ duration: 0.18 }}
+                    className="absolute top-12 right-0 w-52 py-2 flex flex-col z-10"
+                    style={{
+                      background: "rgba(7, 3, 18, 0.96)",
+                      backdropFilter: "blur(24px)",
+                      WebkitBackdropFilter: "blur(24px)",
+                      border: "1px solid rgba(124, 58, 237, 0.22)",
+                      borderRadius: "1rem",
+                      boxShadow: "0 20px 60px rgba(0,0,0,0.6)",
+                    }}
+                  >
+                    <div className="px-4 py-2 mb-1" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+                      <p className="text-sm text-white font-semibold truncate">{displayName}</p>
+                      <p className="text-xs text-white/40 truncate">{user.email}</p>
+                    </div>
+                    <Link
+                      href="/dashboard"
+                      className="px-4 py-2.5 text-sm text-white/70 hover:text-white transition-colors"
+                      onClick={() => setAccountOpen(false)}
+                    >
+                      Dashboard
+                    </Link>
+                    <button
+                      onClick={handleLogout}
+                      className="px-4 py-2.5 text-sm text-left text-white/70 hover:text-white transition-colors cursor-pointer"
+                    >
+                      Logout
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
 
           <Link
             href="/cart"
@@ -152,23 +257,42 @@ export default function Navbar() {
               boxShadow: "0 20px 60px rgba(0,0,0,0.6)",
             }}
           >
-            {[
-              { label: "Shop Collection", href: "/products" },
-              { label: "Cart", href: "/cart" },
-              { label: "About", href: "/#story" },
-            ].map(({ label, href }, i) => (
-              <Link
-                key={label}
-                href={href}
-                className="text-sm text-white/60 hover:text-white transition-colors py-3"
-                style={{
-                  borderBottom: i < 2 ? "1px solid rgba(255,255,255,0.06)" : "none",
-                }}
-                onClick={() => setMenuOpen(false)}
+            {(() => {
+              const links = [
+                { label: "Shop Collection", href: "/products" },
+                { label: "Cart", href: "/cart" },
+                { label: "About", href: "/#story" },
+                ...(!authLoading && user
+                  ? [{ label: "Dashboard", href: "/dashboard" }]
+                  : !authLoading
+                  ? [
+                      { label: "Login", href: "/auth/login" },
+                      { label: "Sign Up", href: "/auth/register" },
+                    ]
+                  : []),
+              ];
+              return links.map(({ label, href }, i) => (
+                <Link
+                  key={label}
+                  href={href}
+                  className="text-sm text-white/60 hover:text-white transition-colors py-3"
+                  style={{
+                    borderBottom: user || i < links.length - 1 ? "1px solid rgba(255,255,255,0.06)" : "none",
+                  }}
+                  onClick={() => setMenuOpen(false)}
+                >
+                  {label}
+                </Link>
+              ));
+            })()}
+            {!authLoading && user && (
+              <button
+                onClick={handleLogout}
+                className="text-sm text-left text-white/60 hover:text-white transition-colors py-3 cursor-pointer"
               >
-                {label}
-              </Link>
-            ))}
+                Logout
+              </button>
+            )}
           </motion.div>
         )}
       </AnimatePresence>

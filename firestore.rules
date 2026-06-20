@@ -1,0 +1,59 @@
+// Raiment Firestore security rules — Phase 1 (Website Authentication) + VTU
+//
+// IMPORTANT: This project's Firestore is shared with the existing iOS/Android
+// apps and already has rules deployed (e.g. for the `products` collection)
+// that are NOT reflected here. Do NOT deploy this file as-is — merge the
+// rules below into your existing ruleset in the Firebase Console (Build >
+// Firestore Database > Rules) or your existing firestore.rules file.
+//
+// What this covers:
+// - users/{userId}: any signed-in user can read (needed so the register page
+//   can look up a referral code by value), but a user can only create/update
+//   their OWN document. walletBalance is only ever mutated server-side via
+//   the Admin SDK (FieldValue.increment in lib/vtuWallet.ts), which bypasses
+//   these rules entirely — these rules just stop a client from writing it
+//   directly.
+// - vtuTransactions/{id}, dataPlans/{id}, reconciliation/{id}: all written
+//   exclusively by the VTU API routes via the Admin SDK.
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /users/{userId} {
+      allow read: if request.auth != null;
+      allow create, update: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // VTU transaction history — only the API routes (Firebase Admin SDK,
+    // which bypasses these rules) ever write here. Clients may read their
+    // own transactions for an order-history view, but can never write
+    // directly, since that would let a user fabricate a "successful" VTU
+    // purchase without ever paying for it.
+    match /vtuTransactions/{transactionId} {
+      allow read: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow write: if false;
+    }
+
+    // VTU data plan catalog (pricing) — public read so the app can show
+    // plans/prices, but only managed server-side via the Admin SDK. Provider
+    // cost fields (peyflexCost/cheapdatahubCost) are present in this
+    // document but the /api/vtu/data-plans route strips them before sending
+    // anything to the client — don't rely on these rules alone to hide cost.
+    match /dataPlans/{planId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Stuck-provider-charge / manual-review queue — admin-only, never
+    // touched by a client. Read access is via /api/admin/reconciliation
+    // (Admin SDK + the admin session cookie checked in middleware.ts), not
+    // through these rules.
+    match /reconciliation/{entryId} {
+      allow read, write: if false;
+    }
+
+    // ... merge in existing rules for `products` and any other collections
+    // used by the iOS/Android apps here ...
+  }
+}

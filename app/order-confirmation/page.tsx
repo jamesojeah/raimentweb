@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { useOrderStore } from "@/store/orderStore";
+import { isDigitalProduct } from "@/lib/shipping";
+import { isPdfMedia } from "@/lib/media";
 
 export default function OrderConfirmationPage() {
   const router = useRouter();
@@ -98,17 +100,42 @@ export default function OrderConfirmationPage() {
         >
           <h3 className="text-base font-bold text-gray-800 mb-3">Items Ordered</h3>
           <div className="space-y-3">
-            {lastOrder.items.map((item) => (
-              <div key={item.id} className="flex justify-between items-center gap-2">
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-gray-800 truncate">{item.name}</p>
-                  <p className="text-xs text-gray-400">Qty: {item.quantity}</p>
+            {lastOrder.items.map((item) => {
+              const pdfs = item.additionalMedia?.filter(isPdfMedia) ?? [];
+              const showDownloads = isDigitalProduct(item.name) && pdfs.length > 0;
+              return (
+                <div key={item.id}>
+                  <div className="flex justify-between items-center gap-2">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-gray-800 truncate">{item.name}</p>
+                      <p className="text-xs text-gray-400">Qty: {item.quantity}</p>
+                    </div>
+                    <p className="text-sm font-semibold text-gray-700 flex-shrink-0">
+                      ₦{(item.price * item.quantity).toLocaleString()}
+                    </p>
+                  </div>
+                  {showDownloads && (
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {pdfs.map((pdf, i) => (
+                        <a
+                          key={pdf.url}
+                          href={pdf.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          download
+                          className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full bg-purple-50 text-[#7C3AED] hover:bg-purple-100 transition-colors"
+                        >
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" />
+                          </svg>
+                          Download PDF{pdfs.length > 1 ? ` (${i + 1})` : ""}
+                        </a>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                <p className="text-sm font-semibold text-gray-700 flex-shrink-0">
-                  ₦{(item.price * item.quantity).toLocaleString()}
-                </p>
-              </div>
-            ))}
+              );
+            })}
           </div>
           <div className="border-t border-gray-100 mt-3 pt-3 space-y-1.5">
             <div className="flex justify-between items-center text-sm">

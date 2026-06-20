@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Playfair_Display, Inter } from "next/font/google";
 import "./globals.css";
 import { CursorProvider } from "@/context/CursorContext";
+import { AuthProvider } from "@/context/AuthContext";
 import Cursor from "@/components/Cursor";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -41,14 +42,16 @@ export default function RootLayout({
     <html lang="en" className={`${playfair.variable} ${inter.variable}`}>
       <body className="min-h-screen flex flex-col text-gray-800 antialiased">
         <VideoBackground />
-        <CursorProvider>
-          <Cursor />
-          <Navbar />
-          <main className="flex-1">{children}</main>
-          <Footer />
-          <WhatsAppButton />
-          <SearchOverlay />
-        </CursorProvider>
+        <AuthProvider>
+          <CursorProvider>
+            <Cursor />
+            <Navbar />
+            <main className="flex-1">{children}</main>
+            <Footer />
+            <WhatsAppButton />
+            <SearchOverlay />
+          </CursorProvider>
+        </AuthProvider>
       </body>
     </html>
   );

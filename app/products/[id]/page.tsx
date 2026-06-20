@@ -4,7 +4,9 @@ import { use } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { fetchProductById, fetchProductsByCategory } from "@/lib/firestore";
-import type { Product } from "@/types/product";
+import { isVideoUrl, isPdfMedia } from "@/lib/media";
+import { isDigitalProduct } from "@/lib/shipping";
+import type { Product, ProductMedia } from "@/types/product";
 import { useCart } from "@/hooks/useCart";
 import ProductCard from "@/components/ProductCard";
 import SectionVideoBackground from "@/components/SectionVideoBackground";
@@ -83,9 +85,15 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   }
 
   const images = product.images?.length > 0 ? product.images : ["/placeholder.jpg"];
+  const galleryMedia: ProductMedia[] = [
+    ...images.map((url) => ({ type: "image", url })),
+    ...product.additionalMedia.filter((m) => !images.includes(m.url) && !isPdfMedia(m)),
+  ];
+  const activeMedia = galleryMedia[activeImage] ?? galleryMedia[0];
   const isSoldOut = product.stockQuantity !== undefined
     ? product.stockQuantity === 0
     : product.inStock === false;
+  const isDigital = isDigitalProduct(product.name);
 
   return (
     <div className="relative min-h-screen overflow-hidden pt-[76px]">
@@ -139,15 +147,24 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                   transition={{ duration: 0.35 }}
                   className="absolute inset-0"
                 >
-                  <Image
-                    src={images[activeImage]}
-                    alt={`${product.name} — image ${activeImage + 1}`}
-                    fill
-                    unoptimized
-                    sizes="(max-width: 1024px) 100vw, 50vw"
-                    className="object-cover"
-                    priority={activeImage === 0}
-                  />
+                  {isVideoUrl(activeMedia.url) || activeMedia.type === "video" ? (
+                    <video
+                      src={activeMedia.url}
+                      controls
+                      playsInline
+                      className="absolute inset-0 w-full h-full object-cover"
+                    />
+                  ) : (
+                    <Image
+                      src={activeMedia.url}
+                      alt={`${product.name} — image ${activeImage + 1}`}
+                      fill
+                      unoptimized
+                      sizes="(max-width: 1024px) 100vw, 50vw"
+                      className="object-cover"
+                      priority={activeImage === 0}
+                    />
+                  )}
                 </motion.div>
               </AnimatePresence>
 
@@ -163,11 +180,11 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
               )}
             </div>
 
-            {images.length > 1 && (
+            {galleryMedia.length > 1 && (
               <div className="flex gap-2.5 overflow-x-auto pb-1">
-                {images.map((src, i) => (
+                {galleryMedia.map((media, i) => (
                   <button
-                    key={i}
+                    key={`${media.url}-${i}`}
                     onClick={() => setActiveImage(i)}
                     className="relative flex-shrink-0 w-16 h-16 rounded-xl overflow-hidden transition-all cursor-pointer"
                     style={{
@@ -178,7 +195,18 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                       boxShadow: i === activeImage ? "0 0 0 3px rgba(124,58,237,0.2)" : "none",
                     }}
                   >
-                    <Image src={src} alt={`Thumbnail ${i + 1}`} fill unoptimized sizes="64px" className="object-cover" />
+                    {isVideoUrl(media.url) || media.type === "video" ? (
+                      <>
+                        <video src={media.url} muted playsInline className="absolute inset-0 w-full h-full object-cover" />
+                        <span className="absolute inset-0 flex items-center justify-center bg-black/30">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
+                            <path d="M8 5v14l11-7z" />
+                          </svg>
+                        </span>
+                      </>
+                    ) : (
+                      <Image src={media.url} alt={`Thumbnail ${i + 1}`} fill unoptimized sizes="64px" className="object-cover" />
+                    )}
                   </button>
                 ))}
               </div>
@@ -206,9 +234,25 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
               {product.name}
             </h2>
 
-            <p className="text-2xl font-bold mb-6" style={{ color: "#A78BFA" }}>
+            <p className="text-2xl font-bold mb-3" style={{ color: "#A78BFA" }}>
               ₦{product.price.toLocaleString()}
             </p>
+
+            {isDigital && (
+              <div
+                className="flex items-center gap-2 text-xs font-semibold mb-6 px-3 py-2 rounded-xl w-fit"
+                style={{
+                  background: "rgba(34,197,94,0.1)",
+                  border: "1px solid rgba(34,197,94,0.25)",
+                  color: "#4ADE80",
+                }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" />
+                </svg>
+                Instant Digital Download — PDF delivered after payment
+              </div>
+            )}
 
             <p className="text-sm leading-[1.9] mb-6" style={{ color: "rgba(255,255,255,0.42)" }}>
               {product.description}

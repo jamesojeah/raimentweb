@@ -37,7 +37,7 @@ export default function CheckoutPage() {
   useEffect(() => { setMounted(true); }, []);
 
   const cartTotal = total();
-  const shippingFee = getShippingFee(form.state);
+  const shippingFee = getShippingFee(form.state, items);
   const orderTotal = cartTotal + shippingFee;
 
   const validate = (): boolean => {
@@ -372,7 +372,9 @@ export default function CheckoutPage() {
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-gray-500">Delivery Fee</span>
-              <span className="font-medium text-gray-700">₦{shippingFee.toLocaleString()}</span>
+              <span className="font-medium text-gray-700">
+                {shippingFee === 0 ? "Free" : `₦${shippingFee.toLocaleString()}`}
+              </span>
             </div>
             <div className="flex justify-between items-center pt-1">
               <span className="font-bold text-gray-800">Total</span>

@@ -44,6 +44,18 @@ const LOCAL_ZONE_STATE: NigerianState = "Delta";
 const LOCAL_ZONE_FEE = 2500;
 const STANDARD_ZONE_FEE = 4000;
 
-export function getShippingFee(state: string): number {
+// Matches "Book"/"Books"/"Worksheet"/"Worksheets" as whole words (e.g. "Kids Learning Worksheet"),
+// but not as part of another word (e.g. "Notebook").
+const DIGITAL_PRODUCT_PATTERN = /\b(books?|worksheets?)\b/i;
+
+// Digital products (e-books, worksheets) are delivered as soft copies and never shipped.
+export function isDigitalProduct(name: string): boolean {
+  return DIGITAL_PRODUCT_PATTERN.test(name);
+}
+
+export function getShippingFee(state: string, items: { name: string }[]): number {
+  if (items.length > 0 && items.every((item) => isDigitalProduct(item.name))) {
+    return 0;
+  }
   return state === LOCAL_ZONE_STATE ? LOCAL_ZONE_FEE : STANDARD_ZONE_FEE;
 }
