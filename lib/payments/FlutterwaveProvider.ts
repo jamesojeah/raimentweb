@@ -29,7 +29,7 @@ export class FlutterwaveProvider implements PaymentProvider {
     }
 
     const res = await fetch(
-      `https://api.flutterwave.com/v3/transactions/verify_by_reference?tx_ref=${encodeURIComponent(reference)}`,
+      `https://api.flutterwave.com/v3/transactions/${encodeURIComponent(reference)}/verify`,
       {
         headers: {
           Authorization: `Bearer ${secretKey}`,
