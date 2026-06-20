@@ -82,12 +82,12 @@ export class PeyflexProvider implements DataProvider {
   readonly name = "peyflex" as const;
 
   async getPlans(network: string): Promise<ProviderPlan[]> {
-    const plans = await getDataPlans(network);
+    const { plans } = await getDataPlans(network);
     return plans.map((p) => ({
-      id: p.id,
-      name: p.name,
-      price: p.price,
-      validity: p.validity ?? null,
+      id: p.plan_code,
+      name: p.label,
+      price: p.amount,
+      validity: null,
     }));
   }
 

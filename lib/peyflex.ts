@@ -48,29 +48,37 @@ async function peyflexFetch<T>(
   return body as T;
 }
 
-export interface PeyflexNetwork {
+// Airtime networks come back as { networks: [{ id, name }] }.
+export interface PeyflexAirtimeNetwork {
   id: string;
   name: string;
 }
 
+// Data networks (carrier + product variant) come back as
+// { networks: [{ identifier, name }] } — note the different key name from
+// airtime networks above, this is a real quirk of Peyflex's API, not a typo.
+export interface PeyflexDataNetwork {
+  identifier: string;
+  name: string;
+}
+
+// { plans: { network, plans: [{ plan_code, amount, label }] } }.
 export interface PeyflexDataPlan {
-  id: string;
-  network: string;
-  name: string;
-  price: number;
-  validity: string;
+  plan_code: string;
+  amount: number;
+  label: string;
 }
 
-export function getAirtimeNetworks(): Promise<PeyflexNetwork[]> {
-  return peyflexFetch<PeyflexNetwork[]>("/api/airtime/networks/");
+export function getAirtimeNetworks(): Promise<{ networks: PeyflexAirtimeNetwork[] }> {
+  return peyflexFetch<{ networks: PeyflexAirtimeNetwork[] }>("/api/airtime/networks/");
 }
 
-export function getDataNetworks(): Promise<PeyflexNetwork[]> {
-  return peyflexFetch<PeyflexNetwork[]>("/api/data/networks/");
+export function getDataNetworks(): Promise<{ networks: PeyflexDataNetwork[] }> {
+  return peyflexFetch<{ networks: PeyflexDataNetwork[] }>("/api/data/networks/");
 }
 
-export function getDataPlans(network: string): Promise<PeyflexDataPlan[]> {
-  return peyflexFetch<PeyflexDataPlan[]>(
+export function getDataPlans(network: string): Promise<{ network: string; plans: PeyflexDataPlan[] }> {
+  return peyflexFetch<{ network: string; plans: PeyflexDataPlan[] }>(
     `/api/data/plans/?network=${encodeURIComponent(network)}`
   );
 }
