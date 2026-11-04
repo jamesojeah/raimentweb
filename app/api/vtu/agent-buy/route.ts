@@ -8,7 +8,7 @@ import {
   refundWallet,
   verifyFirebaseIdToken,
 } from "@/lib/vtuWallet";
-import { getPrimaryDataProvider } from "@/lib/data-providers";
+import { selectProvidersForDataPlan } from "@/lib/data-providers";
 import { deliverData } from "@/lib/data-providers/deliver";
 import type { VtuTransactionType } from "@/types/vtu";
 
@@ -84,8 +84,9 @@ export async function POST(req: NextRequest) {
     if (!plan || !plan.isActive || plan.network !== network) {
       return NextResponse.json({ error: "Data plan not found" }, { status: 404 });
     }
-    // Agents pay at the active primary provider's cost — zero markup.
-    const cost = getProviderCost(plan, getPrimaryDataProvider().name);
+    // Agents pay at whichever provider's cost deliverData() will actually use
+    // for this plan (cheapest usable provider) — zero markup.
+    const cost = getProviderCost(plan, selectProvidersForDataPlan(plan).primary);
     if (cost === null) {
       return NextResponse.json({ error: "Agent pricing is not configured for this plan" }, { status: 500 });
     }

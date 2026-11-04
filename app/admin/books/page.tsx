@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import type { ProductMedia } from "@/types/product";
 
 interface BookProduct {
@@ -122,6 +123,11 @@ export default function AdminBooksPage() {
           >
             Log out
           </button>
+        </div>
+        <div className="max-w-3xl mx-auto pt-1">
+          <Link href="/admin/products" className="text-xs text-white/50 hover:text-white/80 transition-colors">
+            ← Product catalog
+          </Link>
         </div>
       </div>
 

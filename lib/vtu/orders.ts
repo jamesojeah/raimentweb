@@ -7,6 +7,7 @@ import type {
   PublicDataPlan,
   ReconciliationEntry,
   ReconciliationStatus,
+  ValidityGroup,
   VtuPaymentMethod,
   VtuTransaction,
   VtuTransactionStatus,
@@ -29,6 +30,8 @@ export class TransactionAlreadyProcessingError extends Error {
   }
 }
 
+const VALID_VALIDITY_GROUPS: ValidityGroup[] = ["daily", "twoDay", "threeDay", "standard"];
+
 function docToDataPlan(id: string, data: DocumentData): DataPlan {
   return {
     id,
@@ -42,8 +45,17 @@ function docToDataPlan(id: string, data: DocumentData): DataPlan {
     cheapdatahubCost: typeof data.cheapdatahubCost === "number" ? data.cheapdatahubCost : null,
     sellingPrice: data.sellingPrice,
     isActive: data.isActive === true,
+    validityGroup: VALID_VALIDITY_GROUPS.includes(data.validityGroup) ? data.validityGroup : "standard",
+    featured: data.featured === true,
   };
 }
+
+const VALIDITY_GROUP_PRIORITY: Record<ValidityGroup, number> = {
+  daily: 0,
+  twoDay: 1,
+  threeDay: 2,
+  standard: 3,
+};
 
 function docToTransaction(id: string, data: DocumentData): VtuTransaction {
   return {
@@ -92,7 +104,7 @@ export async function loadPublicDataPlans(network: string): Promise<PublicDataPl
     .where("isActive", "==", true)
     .get();
 
-  return snap.docs.map((doc) => {
+  const plans: PublicDataPlan[] = snap.docs.map((doc) => {
     const data = doc.data();
     return {
       id: doc.id,
@@ -101,7 +113,17 @@ export async function loadPublicDataPlans(network: string): Promise<PublicDataPl
       dataAmount: data.dataAmount,
       planType: data.planType,
       sellingPrice: data.sellingPrice,
+      validityGroup: VALID_VALIDITY_GROUPS.includes(data.validityGroup) ? data.validityGroup : "standard",
+      featured: data.featured === true,
     };
+  });
+
+  // Featured plans first, then daily -> twoDay -> threeDay -> standard, so
+  // the Buy Data screen reinforces short-validity/daily-return plans without
+  // needing any client-side sorting logic of its own.
+  return plans.sort((a, b) => {
+    if (a.featured !== b.featured) return a.featured ? -1 : 1;
+    return VALIDITY_GROUP_PRIORITY[a.validityGroup] - VALIDITY_GROUP_PRIORITY[b.validityGroup];
   });
 }
 
@@ -300,6 +322,10 @@ export async function listAllDataPlans(): Promise<DataPlan[]> {
 // clobbers a manually-set price on its next run.
 export async function updateDataPlanSellingPrice(planId: string, sellingPrice: number): Promise<void> {
   await getAdminDb().collection(DATA_PLANS).doc(planId).update({ sellingPrice, priceOverridden: true });
+}
+
+export async function updateDataPlanFeatured(planId: string, featured: boolean): Promise<void> {
+  await getAdminDb().collection(DATA_PLANS).doc(planId).update({ featured });
 }
 
 export async function markReconciliationRecovered(id: string): Promise<void> {

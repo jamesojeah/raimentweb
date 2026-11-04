@@ -176,7 +176,7 @@ export default function ProductCard({ product, index = 0 }: Props) {
               </p>
               <h3
                 className="text-sm font-semibold mb-2 line-clamp-1"
-                style={{ color: "rgba(255,255,255,0.88)" }}
+                style={{ color: "#8B5CF6" }}
               >
                 {product.name}
               </h3>

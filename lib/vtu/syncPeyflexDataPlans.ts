@@ -53,7 +53,11 @@ export async function syncPeyflexDataPlans(): Promise<SyncPeyflexDataPlansResult
 
     // An admin may have hand-set sellingPrice via /api/admin/pricing — never
     // clobber that on a re-sync, only refresh cost/catalog fields for it.
+    // Likewise, a matched CheapDataHub bundle id/cost may have been applied
+    // separately (see scripts/applyCheapDataHubCosts.ts) - this sync only
+    // knows about Peyflex, so it must not blank those fields back out.
     const existingSnap = await db.collection("dataPlans").where("network", "==", network.identifier).get();
+    const existingById = new Map(existingSnap.docs.map((doc) => [doc.id, doc.data()]));
     const overridden = new Set(
       existingSnap.docs.filter((doc) => doc.data().priceOverridden === true).map((doc) => doc.id)
     );
@@ -62,6 +66,7 @@ export async function syncPeyflexDataPlans(): Promise<SyncPeyflexDataPlansResult
 
     for (const plan of plans) {
       const id = docId(network.identifier, plan.plan_code);
+      const existing = existingById.get(id);
       const fields: Record<string, unknown> = {
         network: network.identifier,
         planName: planNameFromLabel(plan.label),
@@ -69,8 +74,8 @@ export async function syncPeyflexDataPlans(): Promise<SyncPeyflexDataPlansResult
         planType: "Peyflex",
         peyflexPlanId: plan.plan_code,
         peyflexCost: plan.amount,
-        cheapdatahubPlanId: null,
-        cheapdatahubCost: null,
+        cheapdatahubPlanId: existing?.cheapdatahubPlanId ?? null,
+        cheapdatahubCost: existing?.cheapdatahubCost ?? null,
         isActive: true,
         updatedAt: Date.now(),
       };

@@ -25,7 +25,7 @@ export default function AdminLoginPage() {
         throw new Error(data.error ?? "Login failed");
       }
 
-      router.replace("/admin/books");
+      router.replace("/admin/products");
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");

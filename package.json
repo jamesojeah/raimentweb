@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "seed:data-plans": "tsx --env-file=.env.local scripts/seedDataPlans.ts"
+    "seed:data-plans": "tsx --env-file=.env.local scripts/seedDataPlans.ts",
+    "apply:cheapdatahub-costs": "tsx --env-file=.env.local scripts/applyCheapDataHubCosts.ts",
+    "seed:daily-retention-plans": "tsx --env-file=.env.local scripts/seedDailyRetentionPlans.ts"
   },
   "dependencies": {
     "@types/hls.js": "^0.13.3",

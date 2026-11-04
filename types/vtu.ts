@@ -40,6 +40,10 @@ export interface VtuTransaction {
   updatedAt: number;
 }
 
+// "daily"/"twoDay"/"threeDay" are the retention-focused short-validity plans;
+// "standard" is everything else (7/14/30-day plans etc).
+export type ValidityGroup = "daily" | "twoDay" | "threeDay" | "standard";
+
 // Firestore `dataPlans/{planId}` — pricing/catalog source of truth.
 export interface DataPlan {
   id: string;
@@ -53,6 +57,8 @@ export interface DataPlan {
   cheapdatahubCost: number | null;
   sellingPrice: number;
   isActive: boolean;
+  validityGroup: ValidityGroup;
+  featured: boolean;
 }
 
 // What /api/vtu/data-plans returns to the client — never expose provider costs.
@@ -63,6 +69,8 @@ export interface PublicDataPlan {
   dataAmount: string;
   planType: string;
   sellingPrice: number;
+  validityGroup: ValidityGroup;
+  featured: boolean;
 }
 
 // Firestore `reconciliation/{id}` — stuck provider charges that need manual follow-up.

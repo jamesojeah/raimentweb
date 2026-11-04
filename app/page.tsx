@@ -119,7 +119,7 @@ export default function HomePage() {
           }}
         >
           Use code{" "}
-          <span style={{ color: "#A78BFA", fontWeight: 600 }}>RAIMENT20</span>
+          <span style={{ color: "#A78BFA", fontWeight: 600 }}>LOLLIS20</span>
           {" "}for 20% off your first order
         </div>
 

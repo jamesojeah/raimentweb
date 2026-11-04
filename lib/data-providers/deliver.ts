@@ -9,7 +9,7 @@ import {
   writeReconciliation,
 } from "@/lib/vtu/orders";
 import { refundWallet } from "@/lib/vtuWallet";
-import { getFallbackDataProvider, getPrimaryDataProvider } from "./index";
+import { getDataProvider, getFallbackDataProvider, getPrimaryDataProvider, selectProvidersForDataPlan } from "./index";
 import type { DataProvider, ProviderPurchaseResult, ProviderStatusResult } from "./DataProvider";
 
 export interface DeliverOutcome {
@@ -18,10 +18,6 @@ export interface DeliverOutcome {
   providerUsed: DataProviderName | null;
   providerRef: string | null;
   needsManualReview: boolean;
-}
-
-function providerNameOf(provider: DataProvider): DataProviderName {
-  return provider.name;
 }
 
 async function attempt(
@@ -135,10 +131,14 @@ export async function deliverData(transactionId: string): Promise<DeliverOutcome
 
   const dataPlan = transaction.type === "data" && transaction.planId ? await loadDataPlan(transaction.planId) : null;
 
-  const primary = getPrimaryDataProvider();
-  const fallback = getFallbackDataProvider();
-  const primaryName = providerNameOf(primary);
-  const fallbackName = providerNameOf(fallback);
+  // Data plans pick whichever provider is actually cheaper for that specific
+  // plan; airtime (no per-plan cost split) keeps the globally configured
+  // default.
+  const { primary: primaryName, fallback: fallbackName } = dataPlan
+    ? selectProvidersForDataPlan(dataPlan)
+    : { primary: getPrimaryDataProvider().name, fallback: getFallbackDataProvider().name };
+  const primary = getDataProvider(primaryName);
+  const fallback = getDataProvider(fallbackName);
 
   const primaryPlanId = dataPlan ? getProviderPlanId(dataPlan, primaryName) : null;
   let primaryResult = await attempt(primary, transaction, primaryPlanId);

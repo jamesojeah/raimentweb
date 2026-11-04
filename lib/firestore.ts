@@ -9,13 +9,14 @@ export async function fetchProducts(): Promise<Product[]> {
     console.log("[Raiment] Raw Firestore fields:", Object.keys(snap.docs[0].data()));
     console.log("[Raiment] First product raw data:", snap.docs[0].data());
   }
-  return snap.docs.map((d) => normaliseProduct(d.id, d.data()));
+  return snap.docs.map((d) => normaliseProduct(d.id, d.data())).filter((p) => !p.archived);
 }
 
 export async function fetchProductById(id: string): Promise<Product | null> {
   const snap = await getDoc(doc(db, "products", id));
   if (!snap.exists()) return null;
-  return normaliseProduct(snap.id, snap.data() as Record<string, unknown>);
+  const product = normaliseProduct(snap.id, snap.data() as Record<string, unknown>);
+  return product.archived ? null : product;
 }
 
 export async function fetchProductsByCategory(
@@ -31,6 +32,6 @@ export async function fetchProductsByCategory(
   const snap = await getDocs(q);
   return snap.docs
     .map((d) => normaliseProduct(d.id, d.data()))
-    .filter((p) => p.id !== excludeId)
+    .filter((p) => p.id !== excludeId && !p.archived)
     .slice(0, maxCount);
 }

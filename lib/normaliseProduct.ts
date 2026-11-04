@@ -1,4 +1,5 @@
-import type { Product, ProductMedia } from "@/types/product";
+import type { Product, ProductMedia, QualityTier } from "@/types/product";
+import { QUALITY_TIERS } from "@/types/product";
 
 // Handles the most common Firestore field name variants from Android/iOS apps.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -43,6 +44,22 @@ export function normaliseProduct(id: string, data: Record<string, any>): Product
         .filter((m) => m.url.length > 0)
     : [];
 
+  const qualityTier: QualityTier | undefined = QUALITY_TIERS.includes(data.qualityTier)
+    ? (data.qualityTier as QualityTier)
+    : undefined;
+
+  // createdAt: Firestore Timestamp (client or Admin SDK both expose toMillis()) → epoch ms
+  const rawCreatedAt = data.createdAt ?? data.dateAdded ?? data.created_at;
+  let createdAt: number | undefined;
+  if (rawCreatedAt && typeof rawCreatedAt.toMillis === "function") {
+    createdAt = rawCreatedAt.toMillis();
+  } else if (typeof rawCreatedAt === "number") {
+    createdAt = rawCreatedAt;
+  } else if (typeof rawCreatedAt === "string") {
+    const parsed = Date.parse(rawCreatedAt);
+    createdAt = Number.isNaN(parsed) ? undefined : parsed;
+  }
+
   return {
     id,
     name,
@@ -54,5 +71,9 @@ export function normaliseProduct(id: string, data: Record<string, any>): Product
     inStock,
     stockQuantity: data.stockQuantity ?? data.stock ?? data.quantity,
     tags: Array.isArray(data.tags) ? data.tags : [],
+    brand: typeof data.brand === "string" ? data.brand : undefined,
+    qualityTier,
+    archived: Boolean(data.archived),
+    createdAt,
   };
 }

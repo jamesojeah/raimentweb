@@ -11,6 +11,7 @@ import FlutterwavePayment, {
 import { FlutterWaveTypes } from "flutterwave-react-v3";
 import type { PaymentInitiateResponse, PaymentVerifyResponse } from "@/types/payment";
 import { NIGERIAN_STATES, getShippingFee } from "@/lib/shipping";
+import { useAuth } from "@/hooks/useAuth";
 
 type FlutterwaveConfig = FlutterWaveTypes.FlutterwaveConfig;
 
@@ -25,6 +26,7 @@ export default function CheckoutPage() {
   const router = useRouter();
   const { items, total, clearCart } = useCart();
   const { setLastOrder } = useOrderStore();
+  const { user, loading: authLoading } = useAuth();
 
   const [mounted, setMounted] = useState(false);
   const [form, setForm] = useState<CheckoutForm>({ name: "", email: "", phone: "", state: "" });
@@ -35,6 +37,12 @@ export default function CheckoutPage() {
   const [initData, setInitData] = useState<PaymentInitiateResponse | null>(null);
 
   useEffect(() => { setMounted(true); }, []);
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.replace("/auth/login?redirect=/checkout");
+    }
+  }, [authLoading, user, router]);
 
   const cartTotal = total();
   const shippingFee = getShippingFee(form.state, items);
@@ -157,7 +165,7 @@ export default function CheckoutPage() {
     setLoading(false);
   };
 
-  if (!mounted) return <div className="min-h-screen bg-[#F8F7FF]" />;
+  if (!mounted || authLoading || !user) return <div className="min-h-screen bg-[#F8F7FF]" />;
 
   if (items.length === 0) {
     return (

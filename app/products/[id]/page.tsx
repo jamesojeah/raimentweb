@@ -114,7 +114,10 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
               {product.name}
             </span>
           </nav>
-          <h1 className="font-serif text-2xl font-bold leading-tight line-clamp-1 text-white">
+          <h1
+            className="font-serif text-2xl font-bold leading-tight line-clamp-1"
+            style={{ color: "#8B5CF6" }}
+          >
             {product.name}
           </h1>
         </div>
@@ -229,7 +232,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
 
             <h2
               className="font-serif text-2xl sm:text-3xl mb-3 leading-tight font-bold"
-              style={{ color: "rgba(255,255,255,0.92)" }}
+              style={{ color: "#8B5CF6" }}
             >
               {product.name}
             </h2>
