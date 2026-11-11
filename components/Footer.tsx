@@ -12,7 +12,7 @@ export default function Footer() {
         borderTop: "1px solid rgba(124,58,237,0.1)",
       }}
     >
-      <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-10">
+      <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-10">
         {/* Brand */}
         <div>
           <p
@@ -50,21 +50,6 @@ export default function Footer() {
                 </Link>
               </li>
             ))}
-          </ul>
-        </div>
-
-        {/* Contact */}
-        <div>
-          <p
-            className="text-xs uppercase tracking-[0.2em] mb-4 font-semibold"
-            style={{ color: "rgba(167,139,250,0.7)" }}
-          >
-            Contact
-          </p>
-          <ul className="space-y-2.5">
-            <li className="text-sm" style={{ color: "rgba(255,255,255,0.32)" }}>
-              @raiment.official
-            </li>
           </ul>
         </div>
       </div>

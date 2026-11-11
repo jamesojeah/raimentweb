@@ -5,6 +5,7 @@ export interface PaymentInitiateRequest {
   customerName: string;
   customerEmail: string;
   customerPhone: string;
+  promoCode?: string;
 }
 
 export interface PaymentInitiateResponse {
@@ -47,5 +48,7 @@ export interface CompletedOrder {
   customerEmail: string;
   deliveryState: string;
   shippingFee: number;
+  promoCode?: string;
+  discount?: number;
   paidAt: string;
 }

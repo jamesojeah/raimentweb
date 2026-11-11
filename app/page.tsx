@@ -11,6 +11,7 @@ import Newsletter from "@/components/Newsletter";
 import { useProducts } from "@/hooks/useProducts";
 import { useRouter } from "next/navigation";
 import SectionVideoBackground from "@/components/SectionVideoBackground";
+import { PROMO_CODE, PROMO_PERCENT } from "@/lib/promo";
 
 const CATEGORY_ICONS: Record<string, React.ReactNode> = {
   All: (
@@ -119,8 +120,8 @@ export default function HomePage() {
           }}
         >
           Use code{" "}
-          <span style={{ color: "#A78BFA", fontWeight: 600 }}>LOLLIS20</span>
-          {" "}for 20% off your first order
+          <span style={{ color: "#A78BFA", fontWeight: 600 }}>{PROMO_CODE}</span>
+          {" "}at checkout for {PROMO_PERCENT}% off your order
         </div>
 
         {/* ── Greeting + search + hero banner ────────────────────────────── */}

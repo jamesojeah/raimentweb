@@ -1,5 +1,6 @@
 import { createHmac } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
+import { isValidPromoCode } from "@/lib/promo";
 
 function corsHeaders(req: NextRequest, origin: string | null): Record<string, string> {
   const headers: Record<string, string> = {
@@ -35,9 +36,14 @@ export async function POST(req: NextRequest) {
       customerName?: unknown;
       customerEmail?: unknown;
       customerPhone?: unknown;
+      promoCode?: unknown;
     };
 
-    const { amount, customerName, customerEmail, customerPhone } = body;
+    const { amount, customerName, customerEmail, customerPhone, promoCode } = body;
+
+    if (promoCode !== undefined && (typeof promoCode !== "string" || !isValidPromoCode(promoCode))) {
+      return NextResponse.json({ error: "Invalid promo code" }, { status: 400, headers });
+    }
 
     if (
       typeof amount !== "number" ||

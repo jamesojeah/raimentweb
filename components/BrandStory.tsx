@@ -135,40 +135,6 @@ export default function BrandStory() {
           </div>
         </div>
       </div>
-
-      {/* Stats */}
-      <div
-        className="max-w-7xl mx-auto mt-20 grid grid-cols-2 md:grid-cols-4 gap-4 pt-14"
-        style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
-      >
-        {[
-          { value: "2019", label: "Founded" },
-          { value: "500+", label: "Products" },
-          { value: "40+", label: "Countries" },
-          { value: "100%", label: "Sustainable" },
-        ].map(({ value, label }, i) => (
-          <motion.div
-            key={label}
-            initial={{ opacity: 0, y: 24 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5, delay: i * 0.1 }}
-            className="text-center py-6 rounded-2xl"
-            style={{
-              background: "rgba(255,255,255,0.03)",
-              backdropFilter: "blur(12px)",
-              border: "1px solid rgba(124,58,237,0.12)",
-            }}
-          >
-            <p className="font-serif text-3xl mb-1 font-bold" style={{ color: "#A78BFA" }}>
-              {value}
-            </p>
-            <p className="text-xs uppercase tracking-[0.2em]" style={{ color: "rgba(255,255,255,0.35)" }}>
-              {label}
-            </p>
-          </motion.div>
-        ))}
-      </div>
     </section>
   );
 }

@@ -12,6 +12,7 @@ import { FlutterWaveTypes } from "flutterwave-react-v3";
 import type { PaymentInitiateResponse, PaymentVerifyResponse } from "@/types/payment";
 import { NIGERIAN_STATES, getShippingFee } from "@/lib/shipping";
 import { useAuth } from "@/hooks/useAuth";
+import { PROMO_PERCENT, getPromoDiscount, isValidPromoCode, normalisePromoCode } from "@/lib/promo";
 
 type FlutterwaveConfig = FlutterWaveTypes.FlutterwaveConfig;
 
@@ -35,6 +36,9 @@ export default function CheckoutPage() {
   const [paymentError, setPaymentError] = useState("");
   const [flwConfig, setFlwConfig] = useState<FlutterwaveConfig | null>(null);
   const [initData, setInitData] = useState<PaymentInitiateResponse | null>(null);
+  const [promoInput, setPromoInput] = useState("");
+  const [appliedPromo, setAppliedPromo] = useState<string | null>(null);
+  const [promoError, setPromoError] = useState("");
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -46,7 +50,27 @@ export default function CheckoutPage() {
 
   const cartTotal = total();
   const shippingFee = getShippingFee(form.state, items);
-  const orderTotal = cartTotal + shippingFee;
+  const discount = appliedPromo ? getPromoDiscount(cartTotal) : 0;
+  const orderTotal = cartTotal - discount + shippingFee;
+
+  const handleApplyPromo = () => {
+    if (!promoInput.trim()) {
+      setPromoError("Enter a promo code");
+      return;
+    }
+    if (!isValidPromoCode(promoInput)) {
+      setPromoError("That promo code isn't valid");
+      return;
+    }
+    setAppliedPromo(normalisePromoCode(promoInput));
+    setPromoError("");
+  };
+
+  const handleRemovePromo = () => {
+    setAppliedPromo(null);
+    setPromoInput("");
+    setPromoError("");
+  };
 
   const validate = (): boolean => {
     const errs: Partial<CheckoutForm> = {};
@@ -76,6 +100,7 @@ export default function CheckoutPage() {
           customerName: form.name.trim(),
           customerEmail: form.email.trim(),
           customerPhone: form.phone.trim(),
+          ...(appliedPromo ? { promoCode: appliedPromo } : {}),
         }),
       });
 
@@ -142,6 +167,7 @@ export default function CheckoutPage() {
           customerEmail: form.email.trim(),
           deliveryState: form.state,
           shippingFee,
+          ...(appliedPromo ? { promoCode: appliedPromo, discount } : {}),
           paidAt: new Date().toISOString(),
         });
         clearCart();
@@ -373,11 +399,68 @@ export default function CheckoutPage() {
               </div>
             ))}
           </div>
+          {/* Promo code */}
+          <div className="border-t border-gray-100 pt-3 mb-3">
+            {appliedPromo ? (
+              <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded-xl px-3 py-2.5">
+                <p className="text-sm text-green-700 font-medium">
+                  {appliedPromo} applied — {PROMO_PERCENT}% off
+                </p>
+                <button
+                  type="button"
+                  onClick={handleRemovePromo}
+                  disabled={loading}
+                  className="text-xs font-semibold text-green-700 hover:underline cursor-pointer disabled:opacity-50"
+                >
+                  Remove
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={promoInput}
+                    onChange={(e) => {
+                      setPromoInput(e.target.value);
+                      setPromoError("");
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleApplyPromo();
+                      }
+                    }}
+                    placeholder="Promo code"
+                    autoCapitalize="characters"
+                    autoComplete="off"
+                    className={`flex-1 min-w-0 px-4 py-2.5 rounded-xl bg-gray-50 border text-sm text-gray-800 outline-none transition-all focus:border-[#7C3AED] focus:bg-white focus:ring-2 focus:ring-purple-100 ${
+                      promoError ? "border-red-400 bg-red-50" : "border-gray-200"
+                    }`}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleApplyPromo}
+                    className="px-4 py-2.5 rounded-xl text-sm font-semibold text-[#7C3AED] bg-purple-50 hover:bg-purple-100 transition-colors cursor-pointer"
+                  >
+                    Apply
+                  </button>
+                </div>
+                {promoError && <p className="text-xs text-red-400 mt-1.5">{promoError}</p>}
+              </>
+            )}
+          </div>
           <div className="border-t border-gray-100 pt-3 space-y-2">
             <div className="flex justify-between text-sm">
               <span className="text-gray-500">Subtotal</span>
               <span className="font-medium text-gray-700">₦{cartTotal.toLocaleString()}</span>
             </div>
+            {discount > 0 && (
+              <div className="flex justify-between text-sm">
+                <span className="text-green-600">Discount ({PROMO_PERCENT}%)</span>
+                <span className="font-medium text-green-600">−₦{discount.toLocaleString()}</span>
+              </div>
+            )}
             <div className="flex justify-between text-sm">
               <span className="text-gray-500">Delivery Fee</span>
               <span className="font-medium text-gray-700">

@@ -138,6 +138,14 @@ export default function OrderConfirmationPage() {
             })}
           </div>
           <div className="border-t border-gray-100 mt-3 pt-3 space-y-1.5">
+            {lastOrder.discount ? (
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-green-600">Discount{lastOrder.promoCode ? ` (${lastOrder.promoCode})` : ""}</span>
+                <span className="text-green-600 font-medium">
+                  −₦{lastOrder.discount.toLocaleString()}
+                </span>
+              </div>
+            ) : null}
             <div className="flex justify-between items-center text-sm">
               <span className="text-gray-400">Delivery Fee</span>
               <span className="text-gray-700 font-medium">

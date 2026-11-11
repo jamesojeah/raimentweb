@@ -1,6 +1,6 @@
-# Raiment — Elevated Fashion E-Commerce
+# Raiment — Shopping Redefined
 
-A production-ready, visually premium e-commerce storefront for the Raiment fashion brand.
+A production-ready, visually premium e-commerce storefront for the Raiment brand.
 
 ## Stack
 
