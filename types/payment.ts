@@ -47,6 +47,7 @@ export interface CompletedOrder {
   customerName: string;
   customerEmail: string;
   deliveryState: string;
+  deliveryAddress?: string;
   shippingFee: number;
   promoCode?: string;
   discount?: number;

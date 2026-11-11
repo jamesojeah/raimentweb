@@ -182,6 +182,14 @@ export default function OrderConfirmationPage() {
                 {lastOrder.deliveryState}
               </span>
             </div>
+            {lastOrder.deliveryAddress && (
+              <div className="flex justify-between gap-4">
+                <span className="text-gray-400 flex-shrink-0">Delivery Address</span>
+                <span className="text-gray-700 font-medium text-right">
+                  {lastOrder.deliveryAddress}
+                </span>
+              </div>
+            )}
             <div className="flex justify-between gap-4">
               <span className="text-gray-400 flex-shrink-0">Transaction ID</span>
               <span className="text-gray-600 font-mono text-xs text-right break-all">

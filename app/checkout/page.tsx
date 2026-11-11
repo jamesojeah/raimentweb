@@ -10,7 +10,7 @@ import FlutterwavePayment, {
 } from "@/components/FlutterwavePayment";
 import { FlutterWaveTypes } from "flutterwave-react-v3";
 import type { PaymentInitiateResponse, PaymentVerifyResponse } from "@/types/payment";
-import { NIGERIAN_STATES, getShippingFee } from "@/lib/shipping";
+import { NIGERIAN_STATES, getShippingFee, isDigitalProduct } from "@/lib/shipping";
 import { useAuth } from "@/hooks/useAuth";
 import { auth } from "@/lib/firebase";
 import { PROMO_PERCENT, getPromoDiscount, isValidPromoCode, normalisePromoCode } from "@/lib/promo";
@@ -22,6 +22,8 @@ interface CheckoutForm {
   email: string;
   phone: string;
   state: string;
+  address: string;
+  note: string;
 }
 
 export default function CheckoutPage() {
@@ -31,7 +33,14 @@ export default function CheckoutPage() {
   const { user, loading: authLoading } = useAuth();
 
   const [mounted, setMounted] = useState(false);
-  const [form, setForm] = useState<CheckoutForm>({ name: "", email: "", phone: "", state: "" });
+  const [form, setForm] = useState<CheckoutForm>({
+    name: "",
+    email: "",
+    phone: "",
+    state: "",
+    address: "",
+    note: "",
+  });
   const [errors, setErrors] = useState<Partial<CheckoutForm>>({});
   const [loading, setLoading] = useState(false);
   const [paymentError, setPaymentError] = useState("");
@@ -52,6 +61,8 @@ export default function CheckoutPage() {
 
   const cartTotal = total();
   const shippingFee = getShippingFee(form.state, items);
+  // Digital-only carts (books, worksheets) are delivered as soft copies, so no street address.
+  const requiresAddress = !items.every((item) => isDigitalProduct(item.name));
   const discount = appliedPromo ? getPromoDiscount(cartTotal) : 0;
   const orderTotal = cartTotal - discount + shippingFee;
 
@@ -106,6 +117,8 @@ export default function CheckoutPage() {
     if (form.phone.replace(/\D/g, "").length < 10)
       errs.phone = "Valid phone number required";
     if (!form.state) errs.state = "Please select your delivery state";
+    if (requiresAddress && form.address.trim().length < 5)
+      errs.address = "Please enter your full delivery address";
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -187,6 +200,8 @@ export default function CheckoutPage() {
               image: i.images?.[0] ?? "",
             })),
             state: form.state,
+            address: requiresAddress ? form.address.trim() : "",
+            additionalNote: requiresAddress ? form.note.trim() : "",
             customerName: form.name.trim(),
             customerEmail: form.email.trim(),
             customerPhone: form.phone.trim(),
@@ -205,6 +220,7 @@ export default function CheckoutPage() {
           customerName: form.name.trim(),
           customerEmail: form.email.trim(),
           deliveryState: form.state,
+          ...(requiresAddress ? { deliveryAddress: form.address.trim() } : {}),
           shippingFee,
           ...(appliedPromo ? { promoCode: appliedPromo, discount } : {}),
           paidAt: new Date().toISOString(),
@@ -414,6 +430,55 @@ export default function CheckoutPage() {
                 )}
               </AnimatePresence>
             </div>
+
+            {requiresAddress && (
+              <>
+                {/* Delivery Address */}
+                <div>
+                  <label className="block text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-1.5">
+                    Delivery Address
+                  </label>
+                  <textarea
+                    value={form.address}
+                    onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))}
+                    placeholder="House number, street, area, city"
+                    autoComplete="street-address"
+                    rows={2}
+                    maxLength={300}
+                    className={`w-full px-4 py-3 rounded-xl bg-gray-50 border text-sm text-gray-800 outline-none transition-all resize-none focus:border-[#7C3AED] focus:bg-white focus:ring-2 focus:ring-purple-100 ${
+                      errors.address ? "border-red-400 bg-red-50" : "border-gray-200"
+                    }`}
+                  />
+                  <AnimatePresence>
+                    {errors.address && (
+                      <motion.p
+                        initial={{ opacity: 0, y: -4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0 }}
+                        className="text-xs text-red-400 mt-1"
+                      >
+                        {errors.address}
+                      </motion.p>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                {/* Landmark / note (optional) */}
+                <div>
+                  <label className="block text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-1.5">
+                    Landmark / Delivery Note <span className="normal-case tracking-normal font-normal">(optional)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={form.note}
+                    onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))}
+                    placeholder="Near the market, call on arrival…"
+                    maxLength={300}
+                    className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 text-sm text-gray-800 outline-none transition-all focus:border-[#7C3AED] focus:bg-white focus:ring-2 focus:ring-purple-100"
+                  />
+                </div>
+              </>
+            )}
           </div>
         </motion.form>
 

@@ -1,12 +1,16 @@
 import { FieldValue } from "firebase-admin/firestore";
 import { getAdminDb } from "@/lib/firebaseAdmin";
-import { getPromoDiscount } from "@/lib/promo";
-import { NIGERIAN_STATES, getShippingFee } from "@/lib/shipping";
+import { PROMO_CODE, getPromoDiscount } from "@/lib/promo";
+import { NIGERIAN_STATES, getShippingFee, isDigitalProduct } from "@/lib/shipping";
 
-// Website orders are written to the shared `orders` collection in the same shape the website
-// has always used there (userId / cartItems / state / shippingFee / total / orderstatus /
-// createdAt), so they sit alongside the mobile apps' documents. They are written server-side
-// only, after Flutterwave has confirmed the payment.
+// Website orders are written to the shared `orders` collection. Each document carries BOTH
+// formats found there so every reader can use it:
+//  - the website's own shape (userId / cartItems / state / shippingFee / total / orderstatus /
+//    createdAt), and
+//  - the iOS/Android apps' shape (user_id / items / address object / string amounts /
+//    order_status / order_datetime), so the order appears in the customer's order history in
+//    the apps.
+// Documents are written server-side only, after Flutterwave has confirmed the payment.
 
 export interface WebOrderItem {
   id: string;
@@ -19,10 +23,14 @@ export interface WebOrderItem {
 export interface WebOrderPayload {
   items: WebOrderItem[];
   state: string;
+  address: string;
+  additionalNote: string;
   customerName: string;
   customerEmail: string;
   customerPhone: string;
 }
+
+const MIN_ADDRESS_LENGTH = 5;
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v);
@@ -31,7 +39,7 @@ function isRecord(v: unknown): v is Record<string, unknown> {
 // Returns null when the client-supplied order details are missing or malformed.
 export function parseOrderPayload(raw: unknown): WebOrderPayload | null {
   if (!isRecord(raw)) return null;
-  const { items, state, customerName, customerEmail, customerPhone } = raw;
+  const { items, state, address, additionalNote, customerName, customerEmail, customerPhone } = raw;
 
   if (!Array.isArray(items) || items.length === 0 || items.length > 100) return null;
   if (typeof state !== "string" || !(NIGERIAN_STATES as readonly string[]).includes(state)) return null;
@@ -61,10 +69,45 @@ export function parseOrderPayload(raw: unknown): WebOrderPayload | null {
   return {
     items: parsed,
     state,
+    address: typeof address === "string" ? address.trim().slice(0, 300) : "",
+    additionalNote: typeof additionalNote === "string" ? additionalNote.trim().slice(0, 300) : "",
     customerName: customerName.trim(),
     customerEmail: customerEmail.trim(),
     customerPhone: customerPhone.trim(),
   };
+}
+
+// Mobile apps store money as strings in Dart double format ("15000.0").
+function money(n: number): string {
+  return n.toFixed(1);
+}
+
+interface ProductInfo {
+  ownerId: string;
+  stockQuantity: string;
+}
+
+// The apps' order items carry the product's owner and stock level. Best-effort: if a product
+// can't be read the fields are left blank rather than failing the order.
+async function loadProductInfo(ids: string[]): Promise<Map<string, ProductInfo>> {
+  const info = new Map<string, ProductInfo>();
+  const unique = [...new Set(ids)].filter(Boolean);
+  if (unique.length === 0) return info;
+  try {
+    const db = getAdminDb();
+    const snaps = await db.getAll(...unique.map((id) => db.collection("products").doc(id)));
+    for (const snap of snaps) {
+      if (!snap.exists) continue;
+      const data = snap.data() ?? {};
+      info.set(snap.id, {
+        ownerId: typeof data.user_id === "string" ? data.user_id : "",
+        stockQuantity: data.stock_quantity !== undefined ? String(data.stock_quantity) : "",
+      });
+    }
+  } catch (err) {
+    console.error("[orders] could not load product details for the order items", err);
+  }
+  return info;
 }
 
 interface SaveWebOrderParams {
@@ -87,12 +130,22 @@ export async function saveWebOrder(params: SaveWebOrderParams): Promise<boolean>
   const discount = promoRedeemed ? getPromoDiscount(subtotal) : 0;
   const shippingFee = payload ? getShippingFee(payload.state, items) : 0;
   const expectedTotal = subtotal - discount + shippingFee;
+  const subtotalAfterDiscount = subtotal - discount;
 
-  // The payment endpoint can't price the cart itself, so flag any order whose items don't add
-  // up to what was actually charged, or whose details were missing, for manual review.
-  const needsReview = !payload || expectedTotal !== paidAmount;
+  const needsDelivery = items.length > 0 && !items.every((i) => isDigitalProduct(i.name));
+  const addressMissing = needsDelivery && (payload?.address.length ?? 0) < MIN_ADDRESS_LENGTH;
+
+  // The payment endpoint can't price the cart itself, so flag for manual review any order
+  // whose items don't add up to what was charged, or whose details are missing.
+  const needsReview = !payload || expectedTotal !== paidAmount || addressMissing;
+
+  const products = await loadProductInfo(items.map((i) => i.id));
+  const orderedAt = Date.now();
+  const userId = uid ?? "";
+  const firstImage = items[0]?.image ?? "";
 
   const order = {
+    // --- the website's own shape ---
     userId: uid,
     cartItems: items.map((i) => ({
       id: i.id,
@@ -102,23 +155,67 @@ export async function saveWebOrder(params: SaveWebOrderParams): Promise<boolean>
       salePrice: i.price,
       quantity: i.quantity,
     })),
-    address: payload?.state ?? "",
     state: payload?.state ?? "",
     phoneNumber: payload?.customerPhone ?? "",
-    customerName: payload?.customerName ?? "",
-    customerEmail: payload?.customerEmail ?? "",
-    subtotal,
-    discount,
-    promoCode: promoRedeemed ? "RAIMENT20" : null,
     shippingFee,
     total: paidAmount,
     orderstatus: "pending",
+    createdAt: FieldValue.serverTimestamp(),
+
+    // --- the iOS/Android apps' shape ---
+    user_id: userId,
+    id: "",
+    title: `My order ${orderedAt}`,
+    image: firstImage,
+    order_datetime: orderedAt,
+    order_status: "Pending",
+    sub_total_amount: money(subtotalAfterDiscount),
+    shipping_charge: money(shippingFee),
+    total_amount: money(paidAmount),
+    stability: 0,
+    address: {
+      id: "",
+      type: "Home",
+      name: payload?.customerName ?? "",
+      mobileNumber: payload?.customerPhone ?? "",
+      address: [payload?.address, payload?.state].filter(Boolean).join(", "),
+      zipCode: "",
+      additionalNote: payload?.additionalNote ?? "",
+      otherDetails: "",
+      user_id: userId,
+    },
+    items: items.map((i) => {
+      const product = products.get(i.id);
+      return {
+        id: i.id,
+        product_id: i.id,
+        product_owner_id: product?.ownerId ?? "",
+        user_id: userId,
+        title: i.name,
+        image: i.image,
+        price: String(i.price),
+        sale_price: "",
+        sale_status: "",
+        cart_quantity: String(i.quantity),
+        stock_quantity: product?.stockQuantity ?? "",
+        chosen_size: "",
+        chosen_color: "Default",
+        stability: 0,
+      };
+    }),
+
+    // --- website-only details ---
+    customerName: payload?.customerName ?? "",
+    customerEmail: payload?.customerEmail ?? "",
+    deliveryAddress: payload?.address ?? "",
+    subtotal,
+    discount,
+    promoCode: promoRedeemed ? PROMO_CODE : null,
     paymentStatus: "paid",
     source: "web",
     txRef,
     transactionId,
     needsReview,
-    createdAt: FieldValue.serverTimestamp(),
   };
 
   try {
@@ -126,12 +223,17 @@ export async function saveWebOrder(params: SaveWebOrderParams): Promise<boolean>
     // a duplicate order.
     await getAdminDb().collection("orders").doc(txRef).create(order);
     if (needsReview) {
-      console.error(`[orders] ALERT: order ${txRef} saved but flagged for review (charged ${paidAmount}, cart computes to ${expectedTotal}, details ${payload ? "present" : "missing"})`);
+      console.error(
+        `[orders] ALERT: order ${txRef} saved but flagged for review (charged ${paidAmount}, cart computes to ${expectedTotal}, details ${payload ? "present" : "missing"}, address ${addressMissing ? "missing" : "ok"})`
+      );
     }
     return true;
   } catch (err) {
     if ((err as { code?: number }).code === 6) return true; // ALREADY_EXISTS
-    console.error(`[orders] ALERT: payment ${txRef} (transaction ${transactionId}, NGN ${paidAmount}) succeeded but the order could not be saved`, err);
+    console.error(
+      `[orders] ALERT: payment ${txRef} (transaction ${transactionId}, NGN ${paidAmount}) succeeded but the order could not be saved`,
+      err
+    );
     return false;
   }
 }
