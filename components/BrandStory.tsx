@@ -44,8 +44,8 @@ export default function BrandStory() {
           </motion.h2>
 
           {[
-            "Raiment was born from a single belief: that what you wear should outlast the moment you bought it. Each piece is sourced, considered, and built to carry you — not just cover you.",
-            "We work with small-batch manufacturers who understand material integrity. No fast cycles. No wasted fabric. Just garments made to age beautifully.",
+            "Raiment was born from a single belief: that what you buy should be worth keeping long after the moment you bought it. Each product is sourced, considered, and chosen to serve you — not just to fill a cart.",
+            "We work with trusted suppliers who care about quality and integrity. No gimmicks. No clutter. Just products made to last.",
           ].map((para, i) => (
             <motion.p
               key={i}

@@ -25,12 +25,12 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Raiment — Elevated Fashion",
+  title: "Raiment — Shopping Redefined",
   description:
-    "Curated fashion for those who refuse the ordinary. Shop the latest collection.",
+    "Shopping redefined for those who refuse the ordinary. Shop the latest collection.",
   openGraph: {
     title: "Raiment",
-    description: "Elevated fashion essentials.",
+    description: "Shopping redefined.",
     type: "website",
   },
 };

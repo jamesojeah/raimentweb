@@ -103,7 +103,7 @@ export default function CheckoutPage() {
         },
         customizations: {
           title: "Raiment",
-          description: "Fashion Order Payment",
+          description: "Order Payment",
           logo: "",
         },
       });

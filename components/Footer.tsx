@@ -22,7 +22,7 @@ export default function Footer() {
             Raiment
           </p>
           <p className="text-sm leading-relaxed max-w-xs" style={{ color: "rgba(255,255,255,0.32)" }}>
-            Fashion crafted for those who move through the world with intention. Elevated essentials, timeless design.
+            Shopping made for those who move through the world with intention. Quality essentials, timeless value.
           </p>
         </div>
 
@@ -62,9 +62,6 @@ export default function Footer() {
             Contact
           </p>
           <ul className="space-y-2.5">
-            <li className="text-sm" style={{ color: "rgba(255,255,255,0.32)" }}>
-              hello@raiment.co
-            </li>
             <li className="text-sm" style={{ color: "rgba(255,255,255,0.32)" }}>
               @raiment.official
             </li>
