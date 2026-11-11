@@ -178,6 +178,19 @@ export default function CheckoutPage() {
           tx_ref: response.tx_ref,
           expectedAmount: initData.amount,
           signature: initData.signature,
+          order: {
+            items: items.map((i) => ({
+              id: i.id,
+              name: i.name,
+              price: i.price,
+              quantity: i.quantity,
+              image: i.images?.[0] ?? "",
+            })),
+            state: form.state,
+            customerName: form.name.trim(),
+            customerEmail: form.email.trim(),
+            customerPhone: form.phone.trim(),
+          },
         }),
       });
 

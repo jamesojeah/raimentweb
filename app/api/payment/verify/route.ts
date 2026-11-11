@@ -1,6 +1,7 @@
 import { createHmac, timingSafeEqual } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { getRequestUid, redeemPromoForTransaction } from "@/lib/promoServer";
+import { parseOrderPayload, saveWebOrder } from "@/lib/webOrders";
 
 function corsHeaders(req: NextRequest, origin: string | null): Record<string, string> {
   const headers: Record<string, string> = {
@@ -43,9 +44,10 @@ export async function POST(req: NextRequest) {
       tx_ref?: unknown;
       expectedAmount?: unknown;
       signature?: unknown;
+      order?: unknown;
     };
 
-    const { transaction_id, tx_ref, expectedAmount, signature } = body;
+    const { transaction_id, tx_ref, expectedAmount, signature, order } = body;
 
     if (
       !transaction_id ||
@@ -137,9 +139,18 @@ export async function POST(req: NextRequest) {
     // If this payment was started with the first-order promo, mark it redeemed. The server
     // matches on the verified tx_ref, so nothing the client sends can skip or fake this.
     const uid = await getRequestUid(req);
-    if (uid) {
-      await redeemPromoForTransaction(uid, tx_ref);
-    }
+    const promoRedeemed = uid ? await redeemPromoForTransaction(uid, tx_ref) : false;
+
+    // Persist the order to Firestore. The payment is already confirmed, so a failure here is
+    // logged (see saveWebOrder) but never turned into a failed payment for the customer.
+    await saveWebOrder({
+      uid,
+      txRef: tx_ref,
+      transactionId: String(transaction_id),
+      paidAmount: flwData.data.amount,
+      payload: parseOrderPayload(order),
+      promoRedeemed,
+    });
 
     return NextResponse.json({ success: true, data: flwData.data }, { headers });
   } catch {
