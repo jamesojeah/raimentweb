@@ -121,7 +121,7 @@ export default function HomePage() {
         >
           Use code{" "}
           <span style={{ color: "#A78BFA", fontWeight: 600 }}>{PROMO_CODE}</span>
-          {" "}at checkout for {PROMO_PERCENT}% off your order
+          {" "}at checkout for {PROMO_PERCENT}% off your first order
         </div>
 
         {/* ── Greeting + search + hero banner ────────────────────────────── */}

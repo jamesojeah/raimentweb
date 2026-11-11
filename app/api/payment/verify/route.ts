@@ -1,5 +1,6 @@
 import { createHmac, timingSafeEqual } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
+import { getRequestUid, redeemPromoForTransaction } from "@/lib/promoServer";
 
 function corsHeaders(req: NextRequest, origin: string | null): Record<string, string> {
   const headers: Record<string, string> = {
@@ -131,6 +132,13 @@ export async function POST(req: NextRequest) {
         { success: false, message: "Payment amount does not match order total" },
         { headers }
       );
+    }
+
+    // If this payment was started with the first-order promo, mark it redeemed. The server
+    // matches on the verified tx_ref, so nothing the client sends can skip or fake this.
+    const uid = await getRequestUid(req);
+    if (uid) {
+      await redeemPromoForTransaction(uid, tx_ref);
     }
 
     return NextResponse.json({ success: true, data: flwData.data }, { headers });

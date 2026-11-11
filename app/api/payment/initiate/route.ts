@@ -1,6 +1,7 @@
 import { createHmac } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { isValidPromoCode } from "@/lib/promo";
+import { checkPromoEligibility, getRequestUid, reservePromo } from "@/lib/promoServer";
 
 function corsHeaders(req: NextRequest, origin: string | null): Record<string, string> {
   const headers: Record<string, string> = {
@@ -72,6 +73,32 @@ export async function POST(req: NextRequest) {
     const tx_ref = `raiment-${Date.now()}-${Math.random()
       .toString(36)
       .slice(2, 9)}`;
+
+    // First-order promo: must be a signed-in user with no prior orders / redemption. The
+    // reservation ties the discount to this tx_ref so verify can redeem it afterwards.
+    if (typeof promoCode === "string") {
+      const uid = await getRequestUid(req);
+      if (!uid) {
+        return NextResponse.json(
+          { error: "Please sign in to use a promo code" },
+          { status: 401, headers }
+        );
+      }
+      const eligibility = await checkPromoEligibility(uid);
+      if (!eligibility.ok) {
+        return NextResponse.json(
+          { error: eligibility.error },
+          { status: eligibility.status, headers }
+        );
+      }
+      const reservation = await reservePromo(uid, tx_ref);
+      if (!reservation.ok) {
+        return NextResponse.json(
+          { error: reservation.error },
+          { status: reservation.status, headers }
+        );
+      }
+    }
 
     // HMAC signature ties the tx_ref to the expected amount server-side
     const signature = createHmac("sha256", secretKey)

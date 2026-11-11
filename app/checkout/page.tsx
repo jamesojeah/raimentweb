@@ -12,6 +12,7 @@ import { FlutterWaveTypes } from "flutterwave-react-v3";
 import type { PaymentInitiateResponse, PaymentVerifyResponse } from "@/types/payment";
 import { NIGERIAN_STATES, getShippingFee } from "@/lib/shipping";
 import { useAuth } from "@/hooks/useAuth";
+import { auth } from "@/lib/firebase";
 import { PROMO_PERCENT, getPromoDiscount, isValidPromoCode, normalisePromoCode } from "@/lib/promo";
 
 type FlutterwaveConfig = FlutterWaveTypes.FlutterwaveConfig;
@@ -39,6 +40,7 @@ export default function CheckoutPage() {
   const [promoInput, setPromoInput] = useState("");
   const [appliedPromo, setAppliedPromo] = useState<string | null>(null);
   const [promoError, setPromoError] = useState("");
+  const [promoChecking, setPromoChecking] = useState(false);
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -53,7 +55,12 @@ export default function CheckoutPage() {
   const discount = appliedPromo ? getPromoDiscount(cartTotal) : 0;
   const orderTotal = cartTotal - discount + shippingFee;
 
-  const handleApplyPromo = () => {
+  const getAuthHeaders = async (): Promise<Record<string, string>> => {
+    const token = await auth.currentUser?.getIdToken();
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  };
+
+  const handleApplyPromo = async () => {
     if (!promoInput.trim()) {
       setPromoError("Enter a promo code");
       return;
@@ -62,8 +69,27 @@ export default function CheckoutPage() {
       setPromoError("That promo code isn't valid");
       return;
     }
-    setAppliedPromo(normalisePromoCode(promoInput));
+
+    setPromoChecking(true);
     setPromoError("");
+    try {
+      // The server decides eligibility (first order only) from the user's order history.
+      const res = await fetch("/api/promo/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(await getAuthHeaders()) },
+        body: JSON.stringify({ promoCode: normalisePromoCode(promoInput) }),
+      });
+      if (!res.ok) {
+        const err = (await res.json()) as { error?: string };
+        setPromoError(err.error ?? "Could not apply promo code");
+        return;
+      }
+      setAppliedPromo(normalisePromoCode(promoInput));
+    } catch {
+      setPromoError("Could not apply promo code. Please try again.");
+    } finally {
+      setPromoChecking(false);
+    }
   };
 
   const handleRemovePromo = () => {
@@ -94,7 +120,7 @@ export default function CheckoutPage() {
     try {
       const res = await fetch("/api/payment/initiate", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(await getAuthHeaders()) },
         body: JSON.stringify({
           amount: orderTotal,
           customerName: form.name.trim(),
@@ -146,7 +172,7 @@ export default function CheckoutPage() {
     try {
       const verifyRes = await fetch("/api/payment/verify", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(await getAuthHeaders()) },
         body: JSON.stringify({
           transaction_id: String(response.transaction_id),
           tx_ref: response.tx_ref,
@@ -441,9 +467,10 @@ export default function CheckoutPage() {
                   <button
                     type="button"
                     onClick={handleApplyPromo}
-                    className="px-4 py-2.5 rounded-xl text-sm font-semibold text-[#7C3AED] bg-purple-50 hover:bg-purple-100 transition-colors cursor-pointer"
+                    disabled={promoChecking}
+                    className="px-4 py-2.5 rounded-xl text-sm font-semibold text-[#7C3AED] bg-purple-50 hover:bg-purple-100 transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                   >
-                    Apply
+                    {promoChecking ? "Checking…" : "Apply"}
                   </button>
                 </div>
                 {promoError && <p className="text-xs text-red-400 mt-1.5">{promoError}</p>}
